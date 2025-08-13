@@ -6,7 +6,6 @@ def main():
     print("Hello from silentmemoir!")
 
 class TimeDisplay (Digits):
-    """A widget to display elapsed time."""
 
 class Stopwatch(HorizontalGroup):
 
@@ -17,6 +16,8 @@ class Stopwatch(HorizontalGroup):
         yield Button("Reset", id="reset") 
         yield TimeDisplay("00:00:00.00") 
 
+
+
 class StopwatchApp(App):
     
     BINDINGS = [("d", "toggle_dark", "Toggle dark mode")]
@@ -25,7 +26,6 @@ class StopwatchApp(App):
         
         yield Header()
         yield Footer()
-        yield VerticalScroll(Stopwatch(), Stopwatch(), Stopwatch())
 
     def action_toggle_dark(self) -> None:
         self.theme = (
