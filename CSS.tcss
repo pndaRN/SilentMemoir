@@ -1,3 +1,12 @@
-Imput{
-    margin: 1 1;
+Screen{
+    align: center middle;
+  }
+
+.box{
+    width: 40;
+    height: 20;
+    margin: 1;
+    padding: 1;
+    color: white 90%;
+    border: heavy white
   }
