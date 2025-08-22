@@ -1,7 +1,9 @@
 from textual.app import App, ComposeResult 
 from textual.widgets import Label
+
 from screens.opening_screen import OpeningScreen 
 from screens.view_journals import ViewJournals
+from screens.journal_entries import JournalEntries
 
 class SilentMemoir(App):
     
@@ -12,8 +14,8 @@ class SilentMemoir(App):
     SCREENS = {
         "Opening Screen": OpeningScreen,
         "View Journals": ViewJournals,
-        # "Entry View": entry_view(),
-        # "Entry Editor": entry_editor(),
+        "Journal Entries": JournalEntries,
+        # "Entry Editor": entry_editor,
     }
 
     def on_mount(self):
