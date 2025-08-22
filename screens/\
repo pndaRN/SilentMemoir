@@ -1,7 +1,5 @@
 from textual.app import App, ComposeResult 
 from textual.widgets import Label
-from screens.opening_screen import OpeningScreen 
-from screens.view_journals import ViewJournals
 
 class SilentMemoir(App):
     
@@ -10,14 +8,14 @@ class SilentMemoir(App):
     # CSS_PATH = "CSS.tcss"
 
     SCREENS = {
-        "Opening Screen": OpeningScreen,
-        "View Journals": ViewJournals,
+        "Opening Screen": opening_screen(),
+        # "Journal Selector": journal_selector(),
         # "Entry View": entry_view(),
         # "Entry Editor": entry_editor(),
     }
 
-    def on_mount(self):
-        self.push_screen("Opening Screen")
+    def compose(self) -> ComposeResult:
+        yield Label("[b]SilentMemoir[/]")
 
     def action_toggle_dark(self) -> None:
         self.theme = (
