@@ -1,16 +1,15 @@
-from textual.app import App, ComposeResult 
-from textual.widgets import Label
+from textual.app import App
 
-from screens.opening_screen import OpeningScreen 
+from screens.opening_screen import OpeningScreen
 from screens.view_journals import ViewJournals
 from screens.journal_entries import JournalEntries
 from screens.entry_editor import EntryEditor
 
+
 class SilentMemoir(App):
-    
     BINDINGS = [("d", "toggle_dark", "Toggle dark mode")]
 
-    # CSS_PATH = "CSS.tcss"
+    CSS_PATH = "assests/css.tcss"
 
     SCREENS = {
         "Opening Screen": OpeningScreen,
@@ -26,6 +25,7 @@ class SilentMemoir(App):
         self.theme = (
             "textual-dark" if self.theme == "textual-light" else "textual-light"
         )
+
 
 if __name__ == "__main__":
     app = SilentMemoir()
