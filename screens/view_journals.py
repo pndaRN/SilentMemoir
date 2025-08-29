@@ -1,10 +1,10 @@
-from textual.app import App, ComposeResult 
+from textual.app import ComposeResult
 from textual.widgets import Label
 from textual.screen import Screen
 from textual.events import Key
 
-class ViewJournals(Screen):
 
+class ViewJournals(Screen):
     def on_key(self, event: Key):
         if event.key == "b":
             self.goto_entry()
@@ -15,7 +15,7 @@ class ViewJournals(Screen):
         yield Label("This is the journal view")
         yield Label("Press 'a' to accept the journal to view")
         yield Label("Press 'b' to go back")
-    
+
     def goto_entry(self):
         self.app.push_screen("Opening Screen")
 
