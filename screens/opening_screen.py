@@ -2,7 +2,7 @@ from textual.app import ComposeResult
 from textual.widgets import Label
 from textual.screen import Screen
 from textual.events import Key
-from textual.containers import Vertical
+from textual.containers import Horizontal
 
 from pyfiglet import Figlet
 from data.quotes import QUOTES
@@ -20,16 +20,18 @@ class OpeningScreen(Screen):
         # Fonts I like: Slant, Big,
         title = f.renderText("Silent Memoir")
 
-        with Vertical(id="os_center"):
+        with Horizontal(id="os_title"):
             yield Label(title, classes="titleText")
+        with Horizontal(id="os_quote"):
             yield Label(random.choice(QUOTES), id="quoteLabel")
+        with Horizontal(id="os_enter"):
             yield Label("Press 'e' to Enter")
 
     def enter(self):
         self.app.push_screen("View Journals")
 
     def on_mount(self):
-        self.set_interval(7, self.update_quote)
+        self.set_interval(10, self.update_quote)
 
     async def update_quote(self):
         quote = random.choice(QUOTES)

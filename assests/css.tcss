@@ -1,25 +1,39 @@
 Screen{
     align: center middle;
-    background: #0A0908; 
+    background: $primary-background-darken-2; 
   }
 
-#os_center {
-    align: center middle;
-    background: #22333B;
-    height: 66%;
-    width: 66%;
-    
+#os_title {
+    align: center bottom;
+    background: $background;
+    height: 30%;
+    width: 90%;
   }
+#os_quote{
+    align: center middle;
+    background: $background;
+    height: 30%;
+    width: 90%;
+  }
+#os_enter{
+    align: center top;
+    background: $background;
+    height: 30%;
+    width: 90%;
+  }
+
+
 
 #quoteLabel {
-    color: #5E503F;
+    color: $text-accent;
     align: center middle;
-    text-style: italic;
+    text-style: reverse italic;
+    text-align: center;
     padding-top: 1;
-    max-width: 50%
+    max-width: 70%
 }
 
 .titleText {
-    color: #EAE0D5;
+    color: $primary;
     text-style: bold;
   }
