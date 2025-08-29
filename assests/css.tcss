@@ -1,3 +1,25 @@
+Screen{
+    align: center middle;
+    background: #0A0908; 
+  }
+
 #os_center {
     align: center middle;
+    background: #22333B;
+    height: 66%;
+    width: 66%;
+    
+  }
+
+#quoteLabel {
+    color: #5E503F;
+    align: center middle;
+    text-style: italic;
+    padding-top: 1;
+    max-width: 50%
+}
+
+.titleText {
+    color: #EAE0D5;
+    text-style: bold;
   }
