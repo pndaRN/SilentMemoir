@@ -85,3 +85,56 @@ NewJournal {
     color: $primary;
     text-style: bold;
   }
+
+.accent {
+    color: $text-accent;
+    text-style: bold;
+}
+
+#main_container {
+    width: 100%;
+    height: 100%;
+}
+
+#journal_panel {
+    width: 40%;
+    height: 100%;
+    border-right: solid $primary;
+    padding: 1;
+}
+
+#entries_panel {
+    width: 60%;
+    height: 100%;
+    padding: 1;
+}
+
+#entries_container {
+    height: 1fr;
+    overflow-y: auto;
+}
+
+.entry_item {
+    border: solid $surface 50%;
+    padding: 1;
+    margin-bottom: 1;
+}
+
+.entry_title {
+    color: $primary;
+    text-style: bold;
+}
+
+.entry_content {
+    text-align: left;
+}
+
+#journal_error {
+    color: red;
+    text-style: bold;
+}
+
+#entries_error {
+    color: red;
+    text-style: bold;
+}

@@ -1,46 +1,50 @@
 from textual.app import ComposeResult
-from textual.widgets import Label, ListView, ListItem, Input
+from textual.widgets import Label, ListView, ListItem, Input, Footer
 from textual.screen import Screen, ModalScreen
+from textual.containers import Vertical, Container, Horizontal, ScrollableContainer
+
+from textual.binding import Binding
 from textual.events import Key
-from textual.containers import Vertical, Container
 
 import os
 
 
 class ViewJournals(Screen):
+    BINDINGS = [
+        Binding(key="h", action="goto_home", description="Home"),
+        Binding(key="a", action="select_cursor", description="Accept"),
+        Binding(key="n", action="goto_new_journal", description="New Journal"),
+        Binding(key="r", action="refresh_journals", description="Refresh"),
+    ]
+
     journals_path = os.path.expanduser("~/.silentmemoir/journals")
     os.makedirs(journals_path, exist_ok=True)
-
-    def on_key(self, event: Key):
-        if event.key == "b":
-            self.goto_entry()
-        if event.key == "a":
-            self.goto_journal()
-        if event.key == "n":
-            self.goto_new_journal()
-        if event.key == "r":
-            self.refresh_journals()
 
     def compose(self) -> ComposeResult:
         journals = self.get_journals()
 
         self.list_view = ListView(*[ListItem(Label(journal)) for journal in journals])
 
-        with Vertical(id="journal_select"):
-            yield Label("Select a Journal")
-            yield self.list_view
-            yield Label("Press 'a' to accept the journal to view")
-            yield Label("Press 'n' to create a new journal")
-            yield Label("Press 'r' to refresh")
-            yield Label("Press 'b' to go back")
+        with Horizontal(id="main_container"):
+            with Vertical(id="journal_panel"):
+                yield Label("Select a Journal")
+                yield self.list_view
+                yield Label("", id="journal_error")
 
-    def goto_entry(self):
+            with Vertical(id="entries_panel"):
+                yield Label("Journal Entries", id="entries_title")
+                yield ScrollableContainer(id="entries_container")
+                yield Label("", id="entries_error")
+
+            yield Footer()
+
+    def action_goto_home(self):
         self.app.push_screen("Opening Screen")
 
-    def goto_journal(self):
-        self.app.push_screen("Journal Entries")
+    def on_list_view_selected(self):
+        self.load_journal_entries(self.list_view.action_select_cursor())
 
-    def goto_new_journal(self):
+    def action_goto_new_journal(self):
         def on_new_journal_created(journal_name):
             if journal_name:
                 self.refresh_journals()
@@ -61,6 +65,24 @@ class ViewJournals(Screen):
 
         for journal in journals:
             self.list_view.append(ListItem(Label(journal)))
+
+    def get_entries(self, journal):
+        journal_path = os.path.join(self.journals_path, journal)
+
+        return [
+            e
+            for e in os.listdir(journal_path)
+            if os.path.isfile(os.path.join(journal_path, e))
+        ]
+
+    def load_journal_entries(self, journal_name):
+        entries = self.get_entries(journal_name)
+
+        if entries is None:
+            pass
+            # push to create entry modal screen and create .md file
+        else:
+            self.entry_view = ListView(*[ListItem(Label(entry)) for entry in entries])
 
 
 class NewJournal(ModalScreen[str]):

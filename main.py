@@ -7,8 +7,6 @@ from screens.entry_editor import EntryEditor
 
 
 class SilentMemoir(App):
-    BINDINGS = [("d", "toggle_dark", "Toggle dark mode")]
-
     CSS_PATH = "assests/css.tcss"
 
     SCREENS = {
