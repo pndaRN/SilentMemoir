@@ -72,14 +72,14 @@ class ViewJournals(Screen):
     def compose(self) -> ComposeResult:
         journals = Journal.list_all()
 
-        self.list_view = ListView(
+        self.journal_view = ListView(
             *[ListItem(Label(journal.name)) for journal in journals]
         )
 
         with Horizontal(id="main_container"):
             with Vertical(id="journal_panel"):
                 yield Label("Select a Journal")
-                yield self.list_view
+                yield self.journal_view
                 yield Label("", id="journal_error")
 
             with Vertical(id="entries_panel"):
@@ -88,6 +88,10 @@ class ViewJournals(Screen):
                 yield Label("", id="entries_error")
 
             yield Footer()
+
+    # ----------------------------
+    # JOURNAL HANDLING
+    # ----------------------------
 
     def action_goto_home(self):
         self.app.push_screen("Opening Screen")
@@ -106,6 +110,13 @@ class ViewJournals(Screen):
 
         for journal in journals:
             self.list_view.append(ListItem(Label(journal.name)))
+
+    # ----------------------------
+    # ENTRY HANDLING
+    # ----------------------------
+
+    def on_list_view_select(self):
+        pass
 
 
 class NewJournal(ModalScreen[str]):
@@ -139,7 +150,8 @@ class NewJournal(ModalScreen[str]):
             self.query_one("#error_message", Label).update("Please enter a name")
             return
         elif journal_name in self.get_existing_journals():
-            self.query_one("#error_message", Label).update("Journal alread exists")
+            self.query_one("#error_message", Label).update("Journal already exists")
+            return
         journal = Journal(journal_name)
         self.dismiss(journal.name)
 
