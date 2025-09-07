@@ -8,6 +8,58 @@ from textual.events import Key
 
 import os
 
+# ----------------------------
+# DATA LAYER
+# ----------------------------
+
+
+class Journal:
+    base_path = os.path.expanduser("~/.silentmemoir/journals/")
+
+    def __init__(self, name: str):
+        self.name = name
+        self.journal_path = os.path.join(self.base_path, self.name)
+        os.makedirs(self.journal_path, exist_ok=True)
+
+    @classmethod
+    def list_all(cls) -> list["Journal"]:
+        os.makedirs(cls.base_path, exist_ok=True)
+        return [
+            cls(d)
+            for d in os.listdir(cls.base_path)
+            if os.path.isdir(os.path.join(cls.base_path, d))
+        ]
+
+    def list_entries(self) -> list[str]:
+        return sorted(os.listidr(self.journal_path))
+
+    def add_entry(self, title: str, content: str) -> str:
+        filename = f"{title}.md"
+        filepath = os.path.join(self.journal_path, filename)
+        with open(filename, "w") as f:
+            f.write(content)
+        return filepath
+
+
+class Entry:
+    def __init__(self, journal: Journal, title: str):
+        self.journal = journal
+        self.title = title
+        self.filepath = os.path.join(journal.path, f"{title}.md")
+
+    def save(self, content: str):
+        with open(self.filepath, "w") as f:
+            f.write(content)
+
+    def read(self) -> str:
+        with open(self.filepath) as f:
+            return f.read
+
+
+# ----------------------------
+# VISUAL LAYER
+# ----------------------------
+
 
 class ViewJournals(Screen):
     BINDINGS = [
@@ -17,13 +69,12 @@ class ViewJournals(Screen):
         Binding(key="r", action="refresh_journals", description="Refresh"),
     ]
 
-    journals_path = os.path.expanduser("~/.silentmemoir/journals")
-    os.makedirs(journals_path, exist_ok=True)
-
     def compose(self) -> ComposeResult:
-        journals = self.get_journals()
+        journals = Journal.list_all()
 
-        self.list_view = ListView(*[ListItem(Label(journal)) for journal in journals])
+        self.list_view = ListView(
+            *[ListItem(Label(journal.name)) for journal in journals]
+        )
 
         with Horizontal(id="main_container"):
             with Vertical(id="journal_panel"):
@@ -41,9 +92,6 @@ class ViewJournals(Screen):
     def action_goto_home(self):
         self.app.push_screen("Opening Screen")
 
-    def on_list_view_selected(self):
-        self.load_journal_entries(self.list_view.action_select_cursor())
-
     def action_goto_new_journal(self):
         def on_new_journal_created(journal_name):
             if journal_name:
@@ -51,38 +99,13 @@ class ViewJournals(Screen):
 
         self.app.push_screen(NewJournal(), on_new_journal_created)
 
-    def get_journals(self):
-        return [
-            d
-            for d in os.listdir(self.journals_path)
-            if os.path.isdir(os.path.join(self.journals_path, d))
-        ]
-
     def refresh_journals(self):
-        journals = self.get_journals()
+        journals = Journal.list_all()
 
         self.list_view.clear()
 
         for journal in journals:
-            self.list_view.append(ListItem(Label(journal)))
-
-    def get_entries(self, journal):
-        journal_path = os.path.join(self.journals_path, journal)
-
-        return [
-            e
-            for e in os.listdir(journal_path)
-            if os.path.isfile(os.path.join(journal_path, e))
-        ]
-
-    def load_journal_entries(self, journal_name):
-        entries = self.get_entries(journal_name)
-
-        if entries is None:
-            pass
-            # push to create entry modal screen and create .md file
-        else:
-            self.entry_view = ListView(*[ListItem(Label(entry)) for entry in entries])
+            self.list_view.append(ListItem(Label(journal.name)))
 
 
 class NewJournal(ModalScreen[str]):
@@ -108,29 +131,17 @@ class NewJournal(ModalScreen[str]):
             self.dismiss(None)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        journal_name = event.value.strip()
+        self.create_journal(event)
 
+    def create_journal(self, input):
+        journal_name = input.value.strip()
         if not journal_name:
-            self.query_one("#error_message", Label).update(
-                "Please enter a journal name"
-            )
+            self.query_one("#error_message", Label).update("Please enter a name")
             return
-
-        existing_journals = self.get_existing_journals()
-
-        if journal_name in existing_journals:
-            self.query_one("#error_message", Label).update("Journal already exisits!")
-            event.input.value = ""
-            return
-
-        try:
-            journal_path = os.path.join(self.journals_path, journal_name)
-            os.makedirs(journal_path, exist_ok=True)
-            self.dismiss(journal_name)
-        except Exception as e:
-            self.query_one("#error_message", Label).update(
-                f"Error creating journal: {str(e)}"
-            )
+        elif journal_name in self.get_existing_journals():
+            self.query_one("#error_message", Label).update("Journal alread exists")
+        journal = Journal(journal_name)
+        self.dismiss(journal.name)
 
     def get_existing_journals(self):
         return [
