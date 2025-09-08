@@ -2,7 +2,6 @@ from textual.app import App
 
 from screens.opening_screen import OpeningScreen
 from screens.view_journals import ViewJournals
-from screens.journal_entries import JournalEntries
 from screens.entry_editor import EntryEditor
 
 
@@ -12,7 +11,6 @@ class SilentMemoir(App):
     SCREENS = {
         "Opening Screen": OpeningScreen,
         "View Journals": ViewJournals,
-        "Journal Entries": JournalEntries,
         "Entry Editor": EntryEditor,
     }
 

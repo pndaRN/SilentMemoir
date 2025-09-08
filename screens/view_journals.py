@@ -1,7 +1,7 @@
 from textual.app import ComposeResult
 from textual.widgets import Label, ListView, ListItem, Input, Footer
 from textual.screen import Screen, ModalScreen
-from textual.containers import Vertical, Container, Horizontal, ScrollableContainer
+from textual.containers import Vertical, Container, Horizontal
 
 from textual.binding import Binding
 from textual.events import Key
@@ -31,21 +31,14 @@ class Journal:
         ]
 
     def list_entries(self) -> list[str]:
-        return sorted(os.listidr(self.journal_path))
-
-    def add_entry(self, title: str, content: str) -> str:
-        filename = f"{title}.md"
-        filepath = os.path.join(self.journal_path, filename)
-        with open(filename, "w") as f:
-            f.write(content)
-        return filepath
+        return sorted(os.listdir(self.journal_path))
 
 
 class Entry:
     def __init__(self, journal: Journal, title: str):
         self.journal = journal
         self.title = title
-        self.filepath = os.path.join(journal.path, f"{title}.md")
+        self.filepath = os.path.join(journal.journal_path, f"{title}.md")
 
     def save(self, content: str):
         with open(self.filepath, "w") as f:
@@ -53,7 +46,7 @@ class Entry:
 
     def read(self) -> str:
         with open(self.filepath) as f:
-            return f.read
+            return f.read()
 
 
 # ----------------------------
@@ -72,22 +65,34 @@ class ViewJournals(Screen):
     def compose(self) -> ComposeResult:
         journals = Journal.list_all()
 
-        self.journal_view = ListView(
-            *[ListItem(Label(journal.name)) for journal in journals]
+        self.journals_list = ListView(
+            *[ListItem(Label(journal.name)) for journal in journals], id="journals_list"
         )
 
+        self.entries_list = ListView(
+            ListItem(Label("Create New Entry"), id="new_entry"),
+            id="entries_list",
+        )
         with Horizontal(id="main_container"):
             with Vertical(id="journal_panel"):
-                yield Label("Select a Journal")
-                yield self.journal_view
+                yield Label("Journals")
+                yield self.journals_list
                 yield Label("", id="journal_error")
 
             with Vertical(id="entries_panel"):
-                yield Label("Journal Entries", id="entries_title")
-                yield ScrollableContainer(id="entries_container")
+                yield Label("Entries")
+                yield self.entries_list
                 yield Label("", id="entries_error")
 
             yield Footer()
+
+    def on_key(self, event: Key):
+        if event.key == "right":
+            self.set_focus(self.entries_list)
+            event.prevent_default()
+        if event.key == "left":
+            self.set_focus(self.journals_list)
+            event.prevent_default()
 
     # ----------------------------
     # JOURNAL HANDLING
@@ -106,17 +111,45 @@ class ViewJournals(Screen):
     def refresh_journals(self):
         journals = Journal.list_all()
 
-        self.list_view.clear()
+        self.journals_list.clear()
 
         for journal in journals:
-            self.list_view.append(ListItem(Label(journal.name)))
+            self.journals_list.append(ListItem(Label(journal.name)))
 
     # ----------------------------
     # ENTRY HANDLING
     # ----------------------------
 
-    def on_list_view_select(self):
-        pass
+    def rebuild_entries_list(self, journal: Journal):
+        """Rebuild the entries list completely"""
+        # Remove all children and rebuild
+        self.entries_list.clear()
+
+        # Add the "Create New Entry" item
+        new_entry_item = ListItem(Label("Create New Entry"))
+        new_entry_item.add_class("new-entry")  # Use classes for identification
+        self.entries_list.append(new_entry_item)
+
+        # Add actual entries
+        for entry in journal.list_entries():
+            entry_item = ListItem(Label(entry))
+            entry_item.add_class("journal-entry")
+            self.entries_list.append(entry_item)
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if event.list_view.id == "journals_list":
+            selected_item = event.item
+            label = selected_item.query_one(Label)
+            journal_name = str(label.renderable)
+            journal = Journal(journal_name)
+
+            self.rebuild_entries_list(journal)
+
+        elif event.list_view.id == "entries_list":
+            if event.item.id == "new_entry":
+                pass
+            else:
+                pass
 
 
 class NewJournal(ModalScreen[str]):
