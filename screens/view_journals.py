@@ -34,7 +34,7 @@ class Journal:
         return sorted(os.listdir(self.journal_path))
 
 
-class Entry:
+class JournalEntry:
     def __init__(self, journal: Journal, title: str):
         self.journal = journal
         self.title = title
@@ -57,7 +57,7 @@ class Entry:
 class ViewJournals(Screen):
     BINDINGS = [
         Binding(key="h", action="goto_home", description="Home"),
-        Binding(key="a", action="select_cursor", description="Accept"),
+        Binding(key="Enter", action="select_cursor", description="Accept"),
         Binding(key="n", action="goto_new_journal", description="New Journal"),
         Binding(key="r", action="refresh_journals", description="Refresh"),
     ]
@@ -69,10 +69,8 @@ class ViewJournals(Screen):
             *[ListItem(Label(journal.name)) for journal in journals], id="journals_list"
         )
 
-        self.entries_list = ListView(
-            ListItem(Label("Create New Entry"), id="new_entry"),
-            id="entries_list",
-        )
+        self.entries_list = ListView(id="entries_list")
+
         with Horizontal(id="main_container"):
             with Vertical(id="journal_panel"):
                 yield Label("Journals")
@@ -127,7 +125,7 @@ class ViewJournals(Screen):
 
         # Add the "Create New Entry" item
         new_entry_item = ListItem(Label("Create New Entry"))
-        new_entry_item.add_class("new-entry")  # Use classes for identification
+        new_entry_item.add_class("new_entry")
         self.entries_list.append(new_entry_item)
 
         # Add actual entries
@@ -146,8 +144,8 @@ class ViewJournals(Screen):
             self.rebuild_entries_list(journal)
 
         elif event.list_view.id == "entries_list":
-            if event.item.id == "new_entry":
-                pass
+            if "new_entry" in event.item.classes:
+                self.app.push_screen("Entry Editor")
             else:
                 pass
 

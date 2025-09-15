@@ -1,8 +1,8 @@
 from textual.app import ComposeResult
 from textual.widgets import Label
 from textual.screen import Screen
-from textual.events import Key
 from textual.containers import Horizontal
+from textual.events import Key
 
 from pyfiglet import Figlet
 from data.quotes import QUOTES
@@ -12,7 +12,7 @@ import random
 
 class OpeningScreen(Screen):
     def on_key(self, event: Key) -> None:
-        if event.key == "e":
+        if event.key == "e" or event.key == "E":
             self.enter()
 
     def compose(self) -> ComposeResult:
