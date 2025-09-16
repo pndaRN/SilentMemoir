@@ -129,7 +129,7 @@ class Entry(ModalScreen):
 
             self.editing_mode = False
             self.status_label.update(
-                "Mode: Preview | Tab: Back to Editing | Ctrl+S: Save |Esc: Exit"
+                "Mode: Preview | Tab: Back to Editing | Ctrl+S: Save | Esc: Exit"
             )
 
         else:
