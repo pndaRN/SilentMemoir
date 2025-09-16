@@ -3,6 +3,16 @@ Screen{
     background: $primary-background-darken-2; 
   }
 
+ModalScreen {
+    width: 100%;
+    height: 100%;
+}
+
+#markdown_scroll {
+    height: 1fr;
+    overflow-y: auto;
+}
+
 NewJournal {
     align: center middle;
   }

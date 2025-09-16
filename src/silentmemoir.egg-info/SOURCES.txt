@@ -1,0 +1,17 @@
+README.md
+pyproject.toml
+src/silentmemoir/__init__.py
+src/silentmemoir/main.py
+src/silentmemoir.egg-info/PKG-INFO
+src/silentmemoir.egg-info/SOURCES.txt
+src/silentmemoir.egg-info/dependency_links.txt
+src/silentmemoir.egg-info/entry_points.txt
+src/silentmemoir.egg-info/requires.txt
+src/silentmemoir.egg-info/top_level.txt
+src/silentmemoir/assets/css.tcss
+src/silentmemoir/data/__init__.py
+src/silentmemoir/data/quotes.py
+src/silentmemoir/screens/__init__.py
+src/silentmemoir/screens/entry.py
+src/silentmemoir/screens/opening_screen.py
+src/silentmemoir/screens/view_journals.py

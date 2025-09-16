@@ -5,7 +5,7 @@ from textual.containers import Horizontal
 from textual.events import Key
 
 from pyfiglet import Figlet
-from data.quotes import QUOTES
+from silentmemoir.data.quotes import QUOTES
 
 import random
 

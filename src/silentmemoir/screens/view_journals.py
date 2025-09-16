@@ -7,6 +7,7 @@ from textual.binding import Binding
 from textual.events import Key
 
 import os
+import shutil
 
 # ----------------------------
 # DATA LAYER
@@ -44,7 +45,7 @@ class ViewJournals(Screen):
         Binding(key="h", action="goto_home", description="Home"),
         Binding(key="Enter", action="select_cursor", description="Accept"),
         Binding(key="n", action="goto_new_journal", description="New Journal"),
-        Binding(key="r", action="refresh_journals", description="Refresh"),
+        Binding(key="d", action="delete_item", description="Delete Highlighted Item"),
     ]
 
     def __init__(self):
@@ -103,6 +104,39 @@ class ViewJournals(Screen):
 
         for journal in journals:
             self.journals_list.append(ListItem(Label(journal.name)))
+
+    def action_delete_item(self):
+        if self.focused is self.journals_list and self.current_journal:
+            journal_name = self.current_journal.name
+            journal_path = self.current_journal.journal_path
+            if os.path.exists(journal_path):
+                shutil.rmtree(journal_path)
+                label = self.query_one("#journal_error", Label)
+                label.update(f"Deleted journal: {journal_name}")
+                self.set_timer(3, lambda: label.update(""))
+            self.current_journal = None
+            self.refresh_journals()
+            self.entries_list.clear()
+
+        elif self.focused is self.entries_list and self.current_journal:
+            selected_item = self.entries_list.highlighted_child
+
+            if not selected_item:
+                return
+
+            if "new_entry" in selected_item.classes:
+                return
+
+            if selected_item and "journal-entry" in selected_item.classes:
+                label = selected_item.query_one(Label)
+                entry_name = str(label.renderable)
+                entry_path = os.path.join(self.current_journal.journal_path, entry_name)
+                if os.path.exists(entry_path):
+                    os.remove(entry_path)
+                    label = self.query_one("#entries_error", Label)
+                    label.update(f"Deleted entry: {entry_name}")
+                    self.set_timer(3, lambda: label.update(""))
+                self.rebuild_entries_list(self.current_journal)
 
     # ----------------------------
     # ENTRY HANDLING

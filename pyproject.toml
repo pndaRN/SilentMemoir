@@ -1,16 +1,21 @@
 [project]
 name = "silentmemoir"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.1.0alpha"
+description = "A terminal journaling app built with Textual"
+authors = [{ name = "Mark", email = "pndarn.dev@proton.me"}]
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "pyfiglet>=1.0.4",
     "textual>=5.3.0",
-    "textual-dev>=1.7.0",
 ]
+[project.scripts]
+silentmemoir = "silentmemoir.main:run"
 
-[dependency-groups]
-dev = [
-    "ruff>=0.12.8",
-]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# optional: if "assests" just holds CSS/images and not Python code, exclude it
+[tool.setuptools.package-data]
+"silentmemoir" = ["assets/*.tcss"]

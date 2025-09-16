@@ -1,11 +1,11 @@
 from textual.app import App
 
-from screens.opening_screen import OpeningScreen
-from screens.view_journals import ViewJournals
+from silentmemoir.screens.opening_screen import OpeningScreen
+from silentmemoir.screens.view_journals import ViewJournals
 
 
 class SilentMemoir(App):
-    CSS_PATH = "assests/css.tcss"
+    CSS_PATH = "assets/css.tcss"
 
     SCREENS = {
         "Opening Screen": OpeningScreen,
@@ -19,6 +19,11 @@ class SilentMemoir(App):
         self.theme = (
             "textual-dark" if self.theme == "textual-light" else "textual-light"
         )
+
+
+def run():
+    app = SilentMemoir()
+    app.run()
 
 
 if __name__ == "__main__":

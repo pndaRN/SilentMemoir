@@ -1,9 +1,9 @@
 from textual.app import ComposeResult
-from textual.widgets import Label, TextArea, Markdown
+from textual.widgets import Label, TextArea, Markdown, Input
 from textual.screen import ModalScreen
-from textual.containers import Vertical
+from textual.containers import Vertical, ScrollableContainer
 from textual.binding import Binding
-from screens.view_journals import Journal
+from silentmemoir.screens.view_journals import Journal
 
 import os
 
@@ -59,6 +59,8 @@ class Entry(ModalScreen):
         self.text_area = None
         self.markdown_viewer = None
         self.status_label = None
+        self.scroll_container = None
+        self.title_input = None
 
         if journal and entry_name:
             self.journal_entry = JournalEntry(journal, entry_name.replace(".md", ""))
@@ -69,6 +71,10 @@ class Entry(ModalScreen):
         if self.is_new_entry:
             journal_name = getattr(self.journal, "name", "Unknown")
             yield Label(f"Create New Entry in: {self.journal.name}")
+            self.title_input = Input(
+                placeholder="Enter custom title (optional)", id="title_input"
+            )
+            yield self.title_input
         else:
             journal_name = getattr(self.journal, "name", "Unknown")
             entry_name = self.entry_name or "Unknown"
@@ -87,28 +93,34 @@ class Entry(ModalScreen):
             self.text_area = TextArea(content, id="entry_content")
             yield self.text_area
 
-            self.markdown_viewer = Markdown(
-                content or "# New Entry\n\start writing your markdown here...",
-                id="markdown_preview",
-            )
-            self.markdown_viewer.display = False
-            yield self.markdown_viewer
+            self.scroll_container = ScrollableContainer(id="markdown_scroll")
+            with self.scroll_container:
+                self.markdown_viewer = Markdown(
+                    content or "# New Entry\n\start writing your markdown here...",
+                    id="markdown_preview",
+                )
+                yield self.markdown_viewer
+            self.scroll_container.display = False
 
     # ------------------------------------
     # ACTIONS
     # ------------------------------------
 
     def action_save_entry(self):
-        self.save_entry(exit_after=True)
+        self.save_entry(exit_after=False)
 
     def action_dismiss_screen(self):
-        self.dismiss(None)
+        self.save_entry(exit_after=True)
 
     def action_toggle_preview(self):
         self.toggle_mode()
 
     def action_toggle_mode(self):
         self.toggle_mode()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "title_input" and self.text_area:
+            self.text_area.focus()
 
     # ------------------------------------
     # TOGGLE
@@ -125,7 +137,7 @@ class Entry(ModalScreen):
                 self.markdown_viewer.update("# Empty Entry\n\nNo content to preview")
 
             self.text_area.display = False
-            self.markdown_viewer.display = True
+            self.scroll_container.display = True
 
             self.editing_mode = False
             self.status_label.update(
@@ -134,7 +146,7 @@ class Entry(ModalScreen):
 
         else:
             self.text_area.display = True
-            self.markdown_viewer.display = False
+            self.scroll_container.display = False
 
             self.text_area.focus()
 
@@ -157,8 +169,15 @@ class Entry(ModalScreen):
             import datetime
 
             if not self.entry_name:
-                timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                self.entry_name = f"entry_{timestamp}"
+                custom_title = ""
+                if self.title_input:
+                    custom_title = self.title_input.value.strip()
+
+                if custom_title:
+                    self.entry_name = custom_title
+                else:
+                    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                    self.entry_name = f"entry_{timestamp}"
 
             self.journal_entry = JournalEntry(self.journal, self.entry_name)
 
@@ -168,5 +187,8 @@ class Entry(ModalScreen):
                 self.dismiss(f"Saved: {self.entry_name}")
 
     def on_mount(self):
-        if hasattr(self, "text_area"):
-            self.text_area.focus()
+        if self.is_new_entry and self.title_input:
+            self.title_input.focus()
+        else:
+            if hasattr(self, "text_area"):
+                self.text_area.focus()

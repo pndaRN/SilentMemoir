@@ -1,0 +1,2 @@
+pyfiglet>=1.0.4
+textual>=5.3.0
