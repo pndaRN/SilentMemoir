@@ -34,21 +34,6 @@ class Journal:
         return sorted(os.listdir(self.journal_path))
 
 
-class JournalEntry:
-    def __init__(self, journal: Journal, title: str):
-        self.journal = journal
-        self.title = title
-        self.filepath = os.path.join(journal.journal_path, f"{title}.md")
-
-    def save(self, content: str):
-        with open(self.filepath, "w") as f:
-            f.write(content)
-
-    def read(self) -> str:
-        with open(self.filepath) as f:
-            return f.read()
-
-
 # ----------------------------
 # VISUAL LAYER
 # ----------------------------
@@ -61,6 +46,10 @@ class ViewJournals(Screen):
         Binding(key="n", action="goto_new_journal", description="New Journal"),
         Binding(key="r", action="refresh_journals", description="Refresh"),
     ]
+
+    def __init__(self):
+        super().__init__()
+        self.current_journal = None
 
     def compose(self) -> ComposeResult:
         journals = Journal.list_all()
@@ -90,6 +79,7 @@ class ViewJournals(Screen):
             event.prevent_default()
         if event.key == "left":
             self.set_focus(self.journals_list)
+            self.entries_list.clear()
             event.prevent_default()
 
     # ----------------------------
@@ -119,7 +109,6 @@ class ViewJournals(Screen):
     # ----------------------------
 
     def rebuild_entries_list(self, journal: Journal):
-        """Rebuild the entries list completely"""
         # Remove all children and rebuild
         self.entries_list.clear()
 
@@ -139,15 +128,44 @@ class ViewJournals(Screen):
             selected_item = event.item
             label = selected_item.query_one(Label)
             journal_name = str(label.renderable)
-            journal = Journal(journal_name)
+            self.current_journal = Journal(journal_name)
 
-            self.rebuild_entries_list(journal)
+            self.rebuild_entries_list(self.current_journal)
+            self.set_focus(self.entries_list)
+
+            if len(self.entries_list.children) > 0:
+                self.entries_list.index = 0
 
         elif event.list_view.id == "entries_list":
+            if not self.current_journal:
+                return
+
             if "new_entry" in event.item.classes:
-                self.app.push_screen("Entry Editor")
+                from screens.entry import Entry
+
+                def on_entry_saved(result):
+                    if result:
+                        self.rebuild_entries_list(self.current_journal)
+
+                entry_screen = Entry(
+                    journal=self.current_journal, entry_name=None, is_new_entry=True
+                )
+                self.app.push_screen(entry_screen, on_entry_saved)
             else:
-                pass
+                label = event.item.query_one(Label)
+                entry_name = str(label.renderable)
+
+                from screens.entry import Entry
+
+                def on_entry_saved(result):
+                    pass
+
+                entry_screen = Entry(
+                    journal=self.current_journal,
+                    entry_name=entry_name,
+                    is_new_entry=False,
+                )
+                self.app.push_screen(entry_screen, on_entry_saved)
 
 
 class NewJournal(ModalScreen[str]):
