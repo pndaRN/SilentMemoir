@@ -1,8 +1,8 @@
 from textual.app import ComposeResult
-from textual.widgets import Label, TextArea
+from textual.widgets import Label, TextArea, Markdown
 from textual.screen import ModalScreen
-from textual.events import Key
 from textual.containers import Vertical
+from textual.binding import Binding
 from screens.view_journals import Journal
 
 import os
@@ -23,14 +23,27 @@ class JournalEntry:
             f.write(content)
 
     def read(self) -> str:
-        with open(self.filepath) as f:
-            return f.read()
+        if os.path.exists(self.filepath):
+            with open(self.filepath) as f:
+                return f.read()
+        return ""
 
     def exists(self) -> bool:
         return os.path.exists(self.filepath)
 
 
+# ------------------------------------
+# ENTRY SCREEN
+# ------------------------------------
+
+
 class Entry(ModalScreen):
+    BINDINGS = [
+        Binding("ctrl+s", "save_entry", "Save", show=True),
+        Binding("escape", "dismiss_screen", "Exit", show=True),
+        Binding("tab", "toggle_preview", "Toggle Mode", show=True, priority=True),
+    ]
+
     def __init__(
         self,
         journal: Journal = None,
@@ -41,6 +54,11 @@ class Entry(ModalScreen):
         self.journal = journal
         self.entry_name = entry_name
         self.is_new_entry = is_new_entry
+        self.editing_mode = True
+
+        self.text_area = None
+        self.markdown_viewer = None
+        self.status_label = None
 
         if journal and entry_name:
             self.journal_entry = JournalEntry(journal, entry_name.replace(".md", ""))
@@ -49,29 +67,87 @@ class Entry(ModalScreen):
 
     def compose(self) -> ComposeResult:
         if self.is_new_entry:
+            journal_name = getattr(self.journal, "name", "Unknown")
             yield Label(f"Create New Entry in: {self.journal.name}")
-            yield Label("Enter your entry content below:")
-            self.text_area = TextArea("", id="entry_content")
-            yield self.text_area
-            yield Label("Press 'Ctrl+S' to save, 'Esc' to go back without saving")
         else:
-            yield Label(f"Editing: {self.entry_name} in {self.journal.name}")
+            journal_name = getattr(self.journal, "name", "Unknown")
+            entry_name = self.entry_name or "Unknown"
+            yield Label(f"Editing: {entry_name} in {journal_name}")
 
-            content = ""
-            if self.journal_entry and self.journal_entry.exists():
-                content = self.journal_entry.read()
+        self.status_label = Label(
+            "Mode: Editing | Tab: Toggle Preview | Ctrl+S: Save | Esc: Exit"
+        )
+        yield self.status_label
 
+        content = ""
+        if not self.is_new_entry and self.journal_entry and self.journal_entry.exists():
+            content = self.journal_entry.read()
+
+        with Vertical(id="contentcontainer"):
             self.text_area = TextArea(content, id="entry_content")
             yield self.text_area
-            yield Label("Press 'Ctrl+S' to save, 'Esc' to go back")
 
-    def on_key(self, event: Key):
-        if event.key == "escape":
-            self.dismiss(None)
-        elif event.key == "ctrl+s":
-            self.save_entry()
+            self.markdown_viewer = Markdown(
+                content or "# New Entry\n\start writing your markdown here...",
+                id="markdown_preview",
+            )
+            self.markdown_viewer.display = False
+            yield self.markdown_viewer
 
-    def save_entry(self):
+    # ------------------------------------
+    # ACTIONS
+    # ------------------------------------
+
+    def action_save_entry(self):
+        self.save_entry(exit_after=True)
+
+    def action_dismiss_screen(self):
+        self.dismiss(None)
+
+    def action_toggle_preview(self):
+        self.toggle_mode()
+
+    def action_toggle_mode(self):
+        self.toggle_mode()
+
+    # ------------------------------------
+    # TOGGLE
+    # ------------------------------------
+
+    def toggle_mode(self):
+        if self.editing_mode:
+            self.save_entry(exit_after=False)
+
+            current_content = self.text_area.text
+            if current_content.strip():
+                self.markdown_viewer.update(current_content)
+            else:
+                self.markdown_viewer.update("# Empty Entry\n\nNo content to preview")
+
+            self.text_area.display = False
+            self.markdown_viewer.display = True
+
+            self.editing_mode = False
+            self.status_label.update(
+                "Mode: Preview | Tab: Back to Editing | Ctrl+S: Save |Esc: Exit"
+            )
+
+        else:
+            self.text_area.display = True
+            self.markdown_viewer.display = False
+
+            self.text_area.focus()
+
+            self.editing_mode = True
+            self.status_label.update(
+                "Mode: Editing | Tab: Toggle Preview | Ctrl+S: Save | Esc: Exit"
+            )
+
+    # ------------------------------------
+    # SAVE
+    # ------------------------------------
+
+    def save_entry(self, exit_after: bool = False):
         if not self.journal:
             return
 
@@ -88,7 +164,8 @@ class Entry(ModalScreen):
 
         if self.journal_entry:
             self.journal_entry.save(content)
-            self.dismiss(f"Saved: {self.entry_name}")
+            if exit_after:
+                self.dismiss(f"Saved: {self.entry_name}")
 
     def on_mount(self):
         if hasattr(self, "text_area"):
