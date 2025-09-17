@@ -1,8 +1,77 @@
-# SilentMemoir
-> Your thoughts, your space, your silence."
+# SilentMemoir  
+> *Your thoughts, your space, your silence.*
 
-My boot.dev personal project
-## Project Overview
-**SilentMemoir** is a minimalist, terminal-based journaling app built with Textual, crafted for users who value quiet focus and keyboard-native interfaces. It offers a distraction-free space to write and reflect, presenting your journal entries in a clean, date-organized layout with rich Markdown rendering. Each entry is stored locally in a secure JSON file, with no need for internet access or external services.
+SilentMemoir is a minimalist, terminal-based journaling app built with [Textual](https://textual.textualize.io/). It provides a quiet, keyboard-native space for writing — no tabs, no browser, no distractions.  
 
-**SilentMemoir** supports multiple journals allowing you to organize your writing into separate themes like work, travel, dreams, or daily reflections. On launch, you can choose or create a journal, and all the writing, searching, and browsing happens within that context. The app features a split-screen editor that shows a live Markdown preview as you type, allowing for expressive formatting without leaving the terminal. A fuzzy search interface makes it easy to rediscover thoughts from the past, filtering entries dynamically as you type. Designed for simplicity and speed, **SilentMemoir** is your private, offline writing companion always just a terminal away.
+---
+
+## ✨ Features (Alpha)
+- **Multiple journals**: organize writing by theme (work, travel, reflections, etc.).  
+- **Custom entry titles**: name entries yourself instead of relying only on timestamps.  
+- **Markdown editing & preview**: write in a text area and toggle to preview formatted Markdown.  
+- **Keyboard shortcuts**:
+  - `Ctrl+S` — save entry  
+  - `Tab` — toggle between edit/preview  
+  - `d` — delete the highlighted journal or entry  
+  - `Esc` — exit screens  
+- **Automatic list refresh** after creating, saving, or deleting journals and entries.  
+- **Local storage only**: entries are saved as Markdown files under `~/.silentmemoir/journals/`.  
+- **Quotes on launch**: a random inspirational quote when opening the app.  
+
+---
+
+## 🚀 Installation
+SilentMemoir is distributed as a Python package. The easiest way to try it is with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv tool install git+https://github.com/<yourname>/SilentMemoir.git
+silentmemoir
+```
+
+Or, if you’ve downloaded a release wheel (`.whl`):
+
+```bash
+uv tool install silentmemoir-0.1.0a0-py3-none-any.whl
+silentmemoir
+```
+
+---
+
+## 🗂 Storage
+All journals and entries are saved locally in your home directory:
+
+```
+~/.silentmemoir/journals/
+```
+
+- Journals are folders.  
+- Entries are Markdown files (`.md`).  
+
+---
+
+## ⚠️ Current Limitations
+- No sync or cloud backup — data lives only on your machine.  
+- No search yet.  
+- No confirmation prompt before delete.  
+- UI and keyboard bindings may change before beta.  
+
+---
+
+## 🛠 Development
+Clone and install locally for development:
+
+```bash
+git clone https://github.com/<yourname>/SilentMemoir.git
+cd SilentMemoir
+uv tool install .
+```
+
+Run from source:
+```bash
+python -m silentmemoir.main
+```
+
+---
+
+## 📜 License
+MIT  
