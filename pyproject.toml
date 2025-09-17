@@ -1,21 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "silentmemoir"
-version = "0.1.0a0"
+version = "0.1.0a1"
 description = "A terminal journaling app built with Textual"
 authors = [{ name = "Mark", email = "pndarn.dev@proton.me"}]
 readme = "README.md"
-license = "MIT"
-requires-python = ">=3.12"
+license = {text = "MIT"}
+requires-python = ">=3.9"
 dependencies = [
     "pyfiglet>=1.0.4",
     "textual>=5.3.0",
 ]
+keywords = ["journal", "diary", "terminal", "tui", "markdown", "writing"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10", 
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing",
+    "Topic :: Utilities",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "ruff",
+]
+
 [project.scripts]
 silentmemoir = "silentmemoir.main:run"
+
+[project.urls]
+"Homepage" = "https://github.com/pndaRN/SilentMemoir"
+"Bug Tracker" = "https://github.com/pndaRN/SilentMemoir/issues"
+"Repository" = "https://github.com/pndaRN/SilentMemoir.git"
+"Documentation" = "https://github.com/pndaRN/SilentMemoir#readme"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# optional: if "assests" just holds CSS/images and not Python code, exclude it
 [tool.setuptools.package-data]
 "silentmemoir" = ["assets/*.tcss"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "C90", "I", "N", "UP", "B", "A", "C4", "T20"]
+ignore = ["E501"]  # Line too long (handled by formatter)
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
