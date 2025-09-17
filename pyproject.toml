@@ -1,6 +1,6 @@
 [project]
 name = "silentmemoir"
-version = "0.1.0alpha"
+version = "0.1.0a0"
 description = "A terminal journaling app built with Textual"
 authors = [{ name = "Mark", email = "pndarn.dev@proton.me"}]
 readme = "README.md"
