@@ -35,6 +35,24 @@ class Journal:
         return sorted(os.listdir(self.journal_path))
 
 
+# Custom ListItem classes to store data
+class JournalListItem(ListItem):
+    def __init__(self, journal_name: str):
+        super().__init__(Label(journal_name))
+        self.journal_name = journal_name
+
+
+class EntryListItem(ListItem):
+    def __init__(self, entry_name: str, is_new_entry: bool = False):
+        super().__init__(Label(entry_name))
+        self.entry_name = entry_name
+        self.is_new_entry = is_new_entry
+        if is_new_entry:
+            self.add_class("new_entry")
+        else:
+            self.add_class("journal-entry")
+
+
 # ----------------------------
 # VISUAL LAYER
 # ----------------------------
@@ -56,7 +74,7 @@ class ViewJournals(Screen):
         journals = Journal.list_all()
 
         self.journals_list = ListView(
-            *[ListItem(Label(journal.name)) for journal in journals], id="journals_list"
+            *[JournalListItem(journal.name) for journal in journals], id="journals_list"
         )
 
         self.entries_list = ListView(id="entries_list")
@@ -103,7 +121,7 @@ class ViewJournals(Screen):
         self.journals_list.clear()
 
         for journal in journals:
-            self.journals_list.append(ListItem(Label(journal.name)))
+            self.journals_list.append(JournalListItem(journal.name))
 
     def action_delete_item(self):
         if self.focused is self.journals_list and self.current_journal:
@@ -124,12 +142,12 @@ class ViewJournals(Screen):
             if not selected_item:
                 return
 
-            if "new_entry" in selected_item.classes:
+            # Check if it's the "new entry" item
+            if isinstance(selected_item, EntryListItem) and selected_item.is_new_entry:
                 return
 
-            if selected_item and "journal-entry" in selected_item.classes:
-                label = selected_item.query_one(Label)
-                entry_name = str(label.renderable)
+            if isinstance(selected_item, EntryListItem):
+                entry_name = selected_item.entry_name
                 entry_path = os.path.join(self.current_journal.journal_path, entry_name)
                 if os.path.exists(entry_path):
                     os.remove(entry_path)
@@ -147,59 +165,55 @@ class ViewJournals(Screen):
         self.entries_list.clear()
 
         # Add the "Create New Entry" item
-        new_entry_item = ListItem(Label("Create New Entry"))
-        new_entry_item.add_class("new_entry")
-        self.entries_list.append(new_entry_item)
+        self.entries_list.append(EntryListItem("Create New Entry", is_new_entry=True))
 
         # Add actual entries
         for entry in journal.list_entries():
-            entry_item = ListItem(Label(entry))
-            entry_item.add_class("journal-entry")
-            self.entries_list.append(entry_item)
+            self.entries_list.append(EntryListItem(entry, is_new_entry=False))
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.list_view.id == "journals_list":
             selected_item = event.item
-            label = selected_item.query_one(Label)
-            journal_name = str(label.renderable)
-            self.current_journal = Journal(journal_name)
+            if isinstance(selected_item, JournalListItem):
+                journal_name = selected_item.journal_name
+                self.current_journal = Journal(journal_name)
 
-            self.rebuild_entries_list(self.current_journal)
-            self.set_focus(self.entries_list)
+                self.rebuild_entries_list(self.current_journal)
+                self.set_focus(self.entries_list)
 
-            if len(self.entries_list.children) > 0:
-                self.entries_list.index = 0
+                if len(self.entries_list.children) > 0:
+                    self.entries_list.index = 0
 
         elif event.list_view.id == "entries_list":
             if not self.current_journal:
                 return
 
-            if "new_entry" in event.item.classes:
-                from screens.entry import Entry
+            if isinstance(event.item, EntryListItem):
+                if event.item.is_new_entry:
+                    from silentmemoir.screens.entry import Entry
 
-                def on_entry_saved(result):
-                    if result:
-                        self.rebuild_entries_list(self.current_journal)
+                    def on_entry_saved(result):
+                        if result:
+                            self.rebuild_entries_list(self.current_journal)
 
-                entry_screen = Entry(
-                    journal=self.current_journal, entry_name=None, is_new_entry=True
-                )
-                self.app.push_screen(entry_screen, on_entry_saved)
-            else:
-                label = event.item.query_one(Label)
-                entry_name = str(label.renderable)
+                    entry_screen = Entry(
+                        journal=self.current_journal, entry_name=None, is_new_entry=True
+                    )
+                    self.app.push_screen(entry_screen, on_entry_saved)
+                else:
+                    entry_name = event.item.entry_name
 
-                from screens.entry import Entry
+                    from silentmemoir.screens.entry import Entry
 
-                def on_entry_saved(result):
-                    pass
+                    def on_entry_saved(result):
+                        pass
 
-                entry_screen = Entry(
-                    journal=self.current_journal,
-                    entry_name=entry_name,
-                    is_new_entry=False,
-                )
-                self.app.push_screen(entry_screen, on_entry_saved)
+                    entry_screen = Entry(
+                        journal=self.current_journal,
+                        entry_name=entry_name,
+                        is_new_entry=False,
+                    )
+                    self.app.push_screen(entry_screen, on_entry_saved)
 
 
 class NewJournal(ModalScreen[str]):
@@ -239,6 +253,8 @@ class NewJournal(ModalScreen[str]):
         self.dismiss(journal.name)
 
     def get_existing_journals(self):
+        if not os.path.exists(self.journals_path):
+            return []
         return [
             d
             for d in os.listdir(self.journals_path)
