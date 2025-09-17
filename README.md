@@ -24,7 +24,7 @@ SilentMemoir is a minimalist, terminal-based journaling app built with [Textual]
 SilentMemoir is distributed as a Python package. The easiest way to try it is with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv tool install git+https://github.com/<yourname>/SilentMemoir.git
+uv tool install git+https://github.com/pndaRN/SilentMemoir.git
 silentmemoir
 ```
 
@@ -61,7 +61,7 @@ All journals and entries are saved locally in your home directory:
 Clone and install locally for development:
 
 ```bash
-git clone https://github.com/<yourname>/SilentMemoir.git
+git clone https://github.com/pndaRN/SilentMemoir.git
 cd SilentMemoir
 uv tool install .
 ```
