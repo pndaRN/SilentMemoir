@@ -1,11 +1,12 @@
-from textual.app import ComposeResult
-from textual.widgets import Label, TextArea, Markdown, Input
-from textual.screen import ModalScreen
-from textual.containers import Vertical, ScrollableContainer
-from textual.binding import Binding
-from silentmemoir.screens.view_journals import Journal
-
 import os
+
+from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.containers import ScrollableContainer, Vertical
+from textual.screen import ModalScreen
+from textual.widgets import Input, Label, Markdown, TextArea
+
+from silentmemoir.screens.view_journals import Journal
 
 # -------------------------------
 # DATA
@@ -96,7 +97,7 @@ class Entry(ModalScreen):
             self.scroll_container = ScrollableContainer(id="markdown_scroll")
             with self.scroll_container:
                 self.markdown_viewer = Markdown(
-                    content or "# New Entry\n\start writing your markdown here...",
+                    content or "# New Entry\n\\start writing your markdown here...",
                     id="markdown_preview",
                 )
                 yield self.markdown_viewer

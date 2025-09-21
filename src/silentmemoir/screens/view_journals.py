@@ -1,13 +1,12 @@
-from textual.app import ComposeResult
-from textual.widgets import Label, ListView, ListItem, Input, Footer
-from textual.screen import Screen, ModalScreen
-from textual.containers import Vertical, Container, Horizontal
-
-from textual.binding import Binding
-from textual.events import Key
-
 import os
 import shutil
+
+from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.containers import Container, Horizontal, Vertical
+from textual.events import Key
+from textual.screen import ModalScreen, Screen
+from textual.widgets import Footer, Input, Label, ListItem, ListView
 
 # ----------------------------
 # DATA LAYER
@@ -94,8 +93,20 @@ class ViewJournals(Screen):
 
     def on_key(self, event: Key):
         if event.key == "right":
-            self.set_focus(self.entries_list)
-            event.prevent_default()
+            if self.focused is self.journals_list:
+                selected_item = self.journals_list.highlighted_child
+                if isinstance(selected_item, JournalListItem):
+                    journal_name = selected_item.journal_name
+                    self.current_journal = Journal(journal_name)
+
+                    self.rebuild_entries_list(self.current_journal)
+                    self.set_focus(self.entries_list)
+
+                    if len(self.entries_list.children) > 0:
+                        self.entries_list.index = 0
+
+                    self.set_focus(self.entries_list)
+                    event.prevent_default()
         if event.key == "left":
             self.set_focus(self.journals_list)
             self.entries_list.clear()
@@ -241,8 +252,8 @@ class NewJournal(ModalScreen[str]):
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self.create_journal(event)
 
-    def create_journal(self, input):
-        journal_name = input.value.strip()
+    def create_journal(self, text):
+        journal_name = text.value.strip()
         if not journal_name:
             self.query_one("#error_message", Label).update("Please enter a name")
             return
