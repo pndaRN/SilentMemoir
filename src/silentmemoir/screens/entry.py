@@ -1,4 +1,11 @@
-import os
+"""
+Entry editor screen with Markdown preview.
+
+This screen provides the interface for creating and editing journal entries,
+with support for Markdown editing and live preview.
+"""
+
+import datetime
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -6,39 +13,19 @@ from textual.containers import ScrollableContainer, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Input, Label, Markdown, TextArea
 
-from silentmemoir.screens.view_journals import Journal
-
-# -------------------------------
-# DATA
-# -------------------------------
-
-
-class JournalEntry:
-    def __init__(self, journal: Journal, title=None):
-        self.journal = journal
-        self.title = title
-        self.filepath = os.path.join(self.journal.journal_path, f"{title}.md")
-
-    def save(self, content: str):
-        with open(self.filepath, "w") as f:
-            f.write(content)
-
-    def read(self) -> str:
-        if os.path.exists(self.filepath):
-            with open(self.filepath) as f:
-                return f.read()
-        return ""
-
-    def exists(self) -> bool:
-        return os.path.exists(self.filepath)
-
-
-# ------------------------------------
-# ENTRY SCREEN
-# ------------------------------------
+from silentmemoir.config import (
+    DEFAULT_ENTRY_PREFIX,
+    EMPTY_PREVIEW_MESSAGE,
+    MARKDOWN_EXTENSION,
+    NEW_ENTRY_PLACEHOLDER,
+    TIMESTAMP_FORMAT,
+)
+from silentmemoir.models import Journal, JournalEntry
 
 
 class Entry(ModalScreen):
+    """Screen for editing journal entries with Markdown preview support."""
+
     BINDINGS = [
         Binding("ctrl+s", "save_entry", "Save", show=True),
         Binding("escape", "dismiss_screen", "Exit", show=True),
@@ -51,6 +38,14 @@ class Entry(ModalScreen):
         entry_name: str = None,
         is_new_entry: bool = False,
     ):
+        """
+        Initialize the entry editor.
+
+        Args:
+            journal: The parent journal
+            entry_name: The name of the entry (with or without .md extension)
+            is_new_entry: Whether this is a new entry being created
+        """
         super().__init__()
         self.journal = journal
         self.entry_name = entry_name
@@ -64,11 +59,19 @@ class Entry(ModalScreen):
         self.title_input = None
 
         if journal and entry_name:
-            self.journal_entry = JournalEntry(journal, entry_name.replace(".md", ""))
+            self.journal_entry = JournalEntry(
+                journal, entry_name.replace(MARKDOWN_EXTENSION, "")
+            )
         else:
             self.journal_entry = None
 
     def compose(self) -> ComposeResult:
+        """
+        Compose the UI for this screen.
+
+        Returns:
+            The composed UI elements
+        """
         if self.is_new_entry:
             journal_name = getattr(self.journal, "name", "Unknown")
             yield Label(f"Create New Entry in: {self.journal.name}")
@@ -87,8 +90,13 @@ class Entry(ModalScreen):
         yield self.status_label
 
         content = ""
-        if not self.is_new_entry and self.journal_entry and self.journal_entry.exists():
-            content = self.journal_entry.read()
+        if not self.is_new_entry and self.journal_entry:
+            try:
+                if self.journal_entry.exists():
+                    content = self.journal_entry.read()
+            except IOError as e:
+                # If we can't read the file, show an error and use empty content
+                content = f"# Error\n\nCould not read entry: {e}"
 
         with Vertical(id="contentcontainer"):
             self.text_area = TextArea(content, id="entry_content")
@@ -97,7 +105,7 @@ class Entry(ModalScreen):
             self.scroll_container = ScrollableContainer(id="markdown_scroll")
             with self.scroll_container:
                 self.markdown_viewer = Markdown(
-                    content or "# New Entry\n\\start writing your markdown here...",
+                    content or NEW_ENTRY_PLACEHOLDER,
                     id="markdown_preview",
                 )
                 yield self.markdown_viewer
@@ -108,18 +116,28 @@ class Entry(ModalScreen):
     # ------------------------------------
 
     def action_save_entry(self):
+        """Action to save the entry without exiting."""
         self.save_entry(exit_after=False)
 
     def action_dismiss_screen(self):
+        """Action to save and exit the entry screen."""
         self.save_entry(exit_after=True)
 
     def action_toggle_preview(self):
+        """Action to toggle between editing and preview modes."""
         self.toggle_mode()
 
     def action_toggle_mode(self):
+        """Action to toggle between editing and preview modes (alternative binding)."""
         self.toggle_mode()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
+        """
+        Handle input submission (Enter key on title input).
+
+        Args:
+            event: The input submitted event
+        """
         if event.input.id == "title_input" and self.text_area:
             self.text_area.focus()
 
@@ -128,6 +146,7 @@ class Entry(ModalScreen):
     # ------------------------------------
 
     def toggle_mode(self):
+        """Toggle between editing mode and preview mode."""
         if self.editing_mode:
             self.save_entry(exit_after=False)
 
@@ -135,7 +154,7 @@ class Entry(ModalScreen):
             if current_content.strip():
                 self.markdown_viewer.update(current_content)
             else:
-                self.markdown_viewer.update("# Empty Entry\n\nNo content to preview")
+                self.markdown_viewer.update(EMPTY_PREVIEW_MESSAGE)
 
             self.text_area.display = False
             self.scroll_container.display = True
@@ -161,14 +180,18 @@ class Entry(ModalScreen):
     # ------------------------------------
 
     def save_entry(self, exit_after: bool = False):
+        """
+        Save the entry content to disk.
+
+        Args:
+            exit_after: Whether to exit the screen after saving
+        """
         if not self.journal:
             return
 
         content = self.text_area.text
 
         if self.is_new_entry:
-            import datetime
-
             if not self.entry_name:
                 custom_title = ""
                 if self.title_input:
@@ -177,17 +200,24 @@ class Entry(ModalScreen):
                 if custom_title:
                     self.entry_name = custom_title
                 else:
-                    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                    self.entry_name = f"entry_{timestamp}"
+                    timestamp = datetime.datetime.now().strftime(TIMESTAMP_FORMAT)
+                    self.entry_name = f"{DEFAULT_ENTRY_PREFIX}{timestamp}"
 
             self.journal_entry = JournalEntry(self.journal, self.entry_name)
 
         if self.journal_entry:
-            self.journal_entry.save(content)
-            if exit_after:
-                self.dismiss(f"Saved: {self.entry_name}")
+            try:
+                self.journal_entry.save(content)
+                if exit_after:
+                    self.dismiss(f"Saved: {self.entry_name}")
+            except IOError as e:
+                # Show error to user - update status label
+                self.status_label.update(f"Error saving entry: {e}")
+                # Don't dismiss if there was an error
+                return
 
     def on_mount(self):
+        """Set focus when the screen is mounted."""
         if self.is_new_entry and self.title_input:
             self.title_input.focus()
         else:
