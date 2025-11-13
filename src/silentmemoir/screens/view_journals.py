@@ -1,63 +1,26 @@
+"""
+Journal and entry management screen.
+
+This screen provides the main interface for viewing, creating, and managing
+journals and their entries.
+"""
+
 import os
-import shutil
 
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.events import Key
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Footer, Input, Label, ListItem, ListView
+from textual.widgets import Footer, Input, Label, ListView
 
-# ----------------------------
-# DATA LAYER
-# ----------------------------
-
-
-class Journal:
-    base_path = os.path.expanduser("~/.silentmemoir/journals/")
-
-    def __init__(self, name: str):
-        self.name = name
-        self.journal_path = os.path.join(self.base_path, self.name)
-        os.makedirs(self.journal_path, exist_ok=True)
-
-    @classmethod
-    def list_all(cls) -> list["Journal"]:
-        os.makedirs(cls.base_path, exist_ok=True)
-        return [
-            cls(d)
-            for d in os.listdir(cls.base_path)
-            if os.path.isdir(os.path.join(cls.base_path, d))
-        ]
-
-    def list_entries(self) -> list[str]:
-        return sorted(os.listdir(self.journal_path))
-
-
-# Custom ListItem classes to store data
-class JournalListItem(ListItem):
-    def __init__(self, journal_name: str):
-        super().__init__(Label(journal_name))
-        self.journal_name = journal_name
-
-
-class EntryListItem(ListItem):
-    def __init__(self, entry_name: str, is_new_entry: bool = False):
-        super().__init__(Label(entry_name))
-        self.entry_name = entry_name
-        self.is_new_entry = is_new_entry
-        if is_new_entry:
-            self.add_class("new_entry")
-        else:
-            self.add_class("journal-entry")
-
-
-# ----------------------------
-# VISUAL LAYER
-# ----------------------------
+from silentmemoir.config import JOURNALS_BASE_PATH, ERROR_MESSAGE_DISPLAY_DURATION
+from silentmemoir.models import EntryListItem, Journal, JournalListItem
 
 
 class ViewJournals(Screen):
+    """Main screen for viewing and managing journals and entries."""
+
     BINDINGS = [
         Binding(key="h", action="goto_home", description="Home"),
         Binding(key="Enter", action="select_cursor", description="Accept"),
@@ -66,10 +29,17 @@ class ViewJournals(Screen):
     ]
 
     def __init__(self):
+        """Initialize the ViewJournals screen."""
         super().__init__()
         self.current_journal = None
 
     def compose(self) -> ComposeResult:
+        """
+        Compose the UI for this screen.
+
+        Returns:
+            The composed UI elements
+        """
         journals = Journal.list_all()
 
         self.journals_list = ListView(
@@ -92,6 +62,12 @@ class ViewJournals(Screen):
             yield Footer()
 
     def on_key(self, event: Key):
+        """
+        Handle keyboard events.
+
+        Args:
+            event: The keyboard event
+        """
         if event.key == "right":
             if self.focused is self.journals_list:
                 selected_item = self.journals_list.highlighted_child
@@ -117,9 +93,12 @@ class ViewJournals(Screen):
     # ----------------------------
 
     def action_goto_home(self):
+        """Navigate to the home screen."""
         self.app.push_screen("Opening Screen")
 
     def action_goto_new_journal(self):
+        """Open the new journal creation dialog."""
+
         def on_new_journal_created(journal_name):
             if journal_name:
                 self.refresh_journals()
@@ -127,6 +106,7 @@ class ViewJournals(Screen):
         self.app.push_screen(NewJournal(), on_new_journal_created)
 
     def refresh_journals(self):
+        """Refresh the journals list from disk."""
         journals = Journal.list_all()
 
         self.journals_list.clear()
@@ -135,43 +115,92 @@ class ViewJournals(Screen):
             self.journals_list.append(JournalListItem(journal.name))
 
     def action_delete_item(self):
-        if self.focused is self.journals_list and self.current_journal:
-            journal_name = self.current_journal.name
-            journal_path = self.current_journal.journal_path
-            if os.path.exists(journal_path):
-                shutil.rmtree(journal_path)
-                label = self.query_one("#journal_error", Label)
-                label.update(f"Deleted journal: {journal_name}")
-                self.set_timer(3, lambda: label.update(""))
-            self.current_journal = None
-            self.refresh_journals()
-            self.entries_list.clear()
+        """
+        Delete the currently focused item (journal or entry).
 
-        elif self.focused is self.entries_list and self.current_journal:
-            selected_item = self.entries_list.highlighted_child
+        Determines which list is focused and delegates to the appropriate
+        delete method.
+        """
+        if self.focused is self.journals_list:
+            self.delete_journal()
+        elif self.focused is self.entries_list:
+            self.delete_entry()
 
-            if not selected_item:
-                return
+    def delete_journal(self):
+        """Delete the currently selected journal and all its entries."""
+        if not self.current_journal:
+            return
 
-            # Check if it's the "new entry" item
-            if isinstance(selected_item, EntryListItem) and selected_item.is_new_entry:
-                return
+        journal_name = self.current_journal.name
 
-            if isinstance(selected_item, EntryListItem):
-                entry_name = selected_item.entry_name
-                entry_path = os.path.join(self.current_journal.journal_path, entry_name)
+        try:
+            self.current_journal.delete()
+            self.show_temporary_message(
+                f"Deleted journal: {journal_name}", "#journal_error"
+            )
+        except (IOError, OSError) as e:
+            self.show_temporary_message(
+                f"Error deleting journal: {e}", "#journal_error"
+            )
+
+        self.current_journal = None
+        self.refresh_journals()
+        self.entries_list.clear()
+
+    def delete_entry(self):
+        """Delete the currently selected entry."""
+        if not self.current_journal:
+            return
+
+        selected_item = self.entries_list.highlighted_child
+
+        if not selected_item:
+            return
+
+        # Don't allow deletion of the "new entry" item
+        if isinstance(selected_item, EntryListItem) and selected_item.is_new_entry:
+            return
+
+        if isinstance(selected_item, EntryListItem):
+            entry_name = selected_item.entry_name
+            entry_path = os.path.join(self.current_journal.journal_path, entry_name)
+
+            try:
                 if os.path.exists(entry_path):
                     os.remove(entry_path)
-                    label = self.query_one("#entries_error", Label)
-                    label.update(f"Deleted entry: {entry_name}")
-                    self.set_timer(3, lambda: label.update(""))
-                self.rebuild_entries_list(self.current_journal)
+                    self.show_temporary_message(
+                        f"Deleted entry: {entry_name}", "#entries_error"
+                    )
+            except (IOError, OSError) as e:
+                self.show_temporary_message(
+                    f"Error deleting entry: {e}", "#entries_error"
+                )
+
+            self.rebuild_entries_list(self.current_journal)
+
+    def show_temporary_message(self, message: str, label_id: str):
+        """
+        Display a temporary message that auto-clears after a duration.
+
+        Args:
+            message: The message to display
+            label_id: The CSS ID of the label to update
+        """
+        label = self.query_one(label_id, Label)
+        label.update(message)
+        self.set_timer(ERROR_MESSAGE_DISPLAY_DURATION, lambda: label.update(""))
 
     # ----------------------------
     # ENTRY HANDLING
     # ----------------------------
 
     def rebuild_entries_list(self, journal: Journal):
+        """
+        Rebuild the entries list for the given journal.
+
+        Args:
+            journal: The journal whose entries should be displayed
+        """
         # Remove all children and rebuild
         self.entries_list.clear()
 
@@ -183,56 +212,91 @@ class ViewJournals(Screen):
             self.entries_list.append(EntryListItem(entry, is_new_entry=False))
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """
+        Handle selection of items in either the journals or entries list.
+
+        Args:
+            event: The selection event
+        """
         if event.list_view.id == "journals_list":
-            selected_item = event.item
-            if isinstance(selected_item, JournalListItem):
-                journal_name = selected_item.journal_name
-                self.current_journal = Journal(journal_name)
-
-                self.rebuild_entries_list(self.current_journal)
-                self.set_focus(self.entries_list)
-
-                if len(self.entries_list.children) > 0:
-                    self.entries_list.index = 0
-
+            self.handle_journal_selected(event.item)
         elif event.list_view.id == "entries_list":
-            if not self.current_journal:
-                return
+            self.handle_entry_selected(event.item)
 
-            if isinstance(event.item, EntryListItem):
-                if event.item.is_new_entry:
-                    from silentmemoir.screens.entry import Entry
+    def handle_journal_selected(self, selected_item):
+        """
+        Handle selection of a journal.
 
-                    def on_entry_saved(result):
-                        if result:
-                            self.rebuild_entries_list(self.current_journal)
+        Args:
+            selected_item: The selected journal list item
+        """
+        if isinstance(selected_item, JournalListItem):
+            journal_name = selected_item.journal_name
+            self.current_journal = Journal(journal_name)
 
-                    entry_screen = Entry(
-                        journal=self.current_journal, entry_name=None, is_new_entry=True
-                    )
-                    self.app.push_screen(entry_screen, on_entry_saved)
-                else:
-                    entry_name = event.item.entry_name
+            self.rebuild_entries_list(self.current_journal)
+            self.set_focus(self.entries_list)
 
-                    from silentmemoir.screens.entry import Entry
+            if len(self.entries_list.children) > 0:
+                self.entries_list.index = 0
 
-                    def on_entry_saved(result):
-                        pass
+    def handle_entry_selected(self, selected_item):
+        """
+        Handle selection of an entry (or the new entry item).
 
-                    entry_screen = Entry(
-                        journal=self.current_journal,
-                        entry_name=entry_name,
-                        is_new_entry=False,
-                    )
-                    self.app.push_screen(entry_screen, on_entry_saved)
+        Args:
+            selected_item: The selected entry list item
+        """
+        if not self.current_journal:
+            return
+
+        if not isinstance(selected_item, EntryListItem):
+            return
+
+        # Import here to avoid circular dependency
+        from silentmemoir.screens.entry import Entry
+
+        if selected_item.is_new_entry:
+            # Creating a new entry
+            def on_entry_saved(result):
+                if result:
+                    self.rebuild_entries_list(self.current_journal)
+
+            entry_screen = Entry(
+                journal=self.current_journal, entry_name=None, is_new_entry=True
+            )
+            self.app.push_screen(entry_screen, on_entry_saved)
+        else:
+            # Editing an existing entry
+            entry_name = selected_item.entry_name
+
+            def on_entry_saved(result):
+                # Optionally rebuild list if needed
+                pass
+
+            entry_screen = Entry(
+                journal=self.current_journal,
+                entry_name=entry_name,
+                is_new_entry=False,
+            )
+            self.app.push_screen(entry_screen, on_entry_saved)
 
 
 class NewJournal(ModalScreen[str]):
+    """Modal dialog for creating a new journal."""
+
     def __init__(self):
+        """Initialize the new journal dialog."""
         super().__init__()
-        self.journals_path = os.path.expanduser("~/.silentmemoir/journals")
+        self.journals_path = JOURNALS_BASE_PATH
 
     def compose(self) -> ComposeResult:
+        """
+        Compose the UI for this dialog.
+
+        Returns:
+            The composed UI elements
+        """
         yield Container(
             Vertical(
                 Label("Create New Journal"),
@@ -246,13 +310,31 @@ class NewJournal(ModalScreen[str]):
         )
 
     def on_key(self, event: Key):
+        """
+        Handle keyboard events.
+
+        Args:
+            event: The keyboard event
+        """
         if event.key == "escape":
             self.dismiss(None)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
+        """
+        Handle input submission.
+
+        Args:
+            event: The input submitted event
+        """
         self.create_journal(event)
 
     def create_journal(self, text):
+        """
+        Create a new journal with the given name.
+
+        Args:
+            text: The input event containing the journal name
+        """
         journal_name = text.value.strip()
         if not journal_name:
             self.query_one("#error_message", Label).update("Please enter a name")
@@ -260,10 +342,20 @@ class NewJournal(ModalScreen[str]):
         elif journal_name in self.get_existing_journals():
             self.query_one("#error_message", Label).update("Journal already exists")
             return
-        journal = Journal(journal_name)
-        self.dismiss(journal.name)
+
+        try:
+            journal = Journal(journal_name)
+            self.dismiss(journal.name)
+        except (IOError, OSError) as e:
+            self.query_one("#error_message", Label).update(f"Error creating journal: {e}")
 
     def get_existing_journals(self):
+        """
+        Get list of existing journal names.
+
+        Returns:
+            List of journal directory names
+        """
         if not os.path.exists(self.journals_path):
             return []
         return [
