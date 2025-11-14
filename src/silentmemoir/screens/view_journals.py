@@ -26,6 +26,7 @@ class ViewJournals(Screen):
         Binding(key="Enter", action="select_cursor", description="Accept"),
         Binding(key="n", action="goto_new_journal", description="New Journal"),
         Binding(key="d", action="delete_item", description="Delete Highlighted Item"),
+        Binding(key="ctrl+f", action="open_finder", description="Find Entry"),
     ]
 
     def __init__(self):
@@ -104,6 +105,36 @@ class ViewJournals(Screen):
                 self.refresh_journals()
 
         self.app.push_screen(NewJournal(), on_new_journal_created)
+
+    def action_open_finder(self):
+        """Open the fuzzy finder for searching entries."""
+        from silentmemoir.screens.finder import Finder
+
+        def on_entry_selected(result):
+            if result:
+                # Open the selected entry
+                journal_name = result["journal_name"]
+                entry_name = result["entry_name"]
+
+                journal = Journal(journal_name)
+                self.current_journal = journal
+
+                # Import here to avoid circular dependency
+                from silentmemoir.screens.entry import Entry
+
+                def on_entry_saved(save_result):
+                    # Refresh entries list if needed
+                    if self.current_journal:
+                        self.rebuild_entries_list(self.current_journal)
+
+                entry_screen = Entry(
+                    journal=journal,
+                    entry_name=entry_name,
+                    is_new_entry=False,
+                )
+                self.app.push_screen(entry_screen, on_entry_saved)
+
+        self.app.push_screen(Finder(), on_entry_selected)
 
     def refresh_journals(self):
         """Refresh the journals list from disk."""
