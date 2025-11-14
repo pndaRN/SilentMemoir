@@ -93,8 +93,8 @@ class JournalEntry:
 
             with open(self.filepath, "w", encoding="utf-8") as f:
                 f.write(content)
-        except (IOError, OSError) as e:
-            raise IOError(f"Failed to save entry: {e}") from e
+        except OSError as e:
+            raise OSError(f"Failed to save entry: {e}") from e
 
     def read(self) -> str:
         """
@@ -112,8 +112,8 @@ class JournalEntry:
         try:
             with open(self.filepath, encoding="utf-8") as f:
                 return f.read()
-        except (IOError, OSError) as e:
-            raise IOError(f"Failed to read entry: {e}") from e
+        except OSError as e:
+            raise OSError(f"Failed to read entry: {e}") from e
 
     def exists(self) -> bool:
         """
@@ -134,8 +134,8 @@ class JournalEntry:
         if os.path.exists(self.filepath):
             try:
                 os.remove(self.filepath)
-            except (IOError, OSError) as e:
-                raise IOError(f"Failed to delete entry: {e}") from e
+            except OSError as e:
+                raise OSError(f"Failed to delete entry: {e}") from e
 
 
 # ----------------------------

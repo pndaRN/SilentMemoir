@@ -12,9 +12,9 @@ from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.events import Key
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Footer, Input, Label, ListView
+from textual.widgets import Button, Footer, Input, Label, ListView
 
-from silentmemoir.config import JOURNALS_BASE_PATH, ERROR_MESSAGE_DISPLAY_DURATION
+from silentmemoir.config import ERROR_MESSAGE_DISPLAY_DURATION, JOURNALS_BASE_PATH
 from silentmemoir.models import EntryListItem, Journal, JournalListItem
 
 
@@ -133,19 +133,25 @@ class ViewJournals(Screen):
 
         journal_name = self.current_journal.name
 
-        try:
-            self.current_journal.delete()
-            self.show_temporary_message(
-                f"Deleted journal: {journal_name}", "#journal_error"
-            )
-        except (IOError, OSError) as e:
-            self.show_temporary_message(
-                f"Error deleting journal: {e}", "#journal_error"
-            )
+        def on_confirm(confirmed: bool):
+            if confirmed:
+                try:
+                    self.current_journal.delete()
+                    self.show_temporary_message(
+                        f"Deleted journal: {journal_name}", "#journal_error"
+                    )
+                except OSError as e:
+                    self.show_temporary_message(
+                        f"Error deleting journal: {e}", "#journal_error"
+                    )
 
-        self.current_journal = None
-        self.refresh_journals()
-        self.entries_list.clear()
+                self.current_journal = None
+                self.refresh_journals()
+                self.entries_list.clear()
+
+        self.app.push_screen(
+            ConfirmDeleteModal("journal", journal_name), on_confirm
+        )
 
     def delete_entry(self):
         """Delete the currently selected entry."""
@@ -165,18 +171,24 @@ class ViewJournals(Screen):
             entry_name = selected_item.entry_name
             entry_path = os.path.join(self.current_journal.journal_path, entry_name)
 
-            try:
-                if os.path.exists(entry_path):
-                    os.remove(entry_path)
-                    self.show_temporary_message(
-                        f"Deleted entry: {entry_name}", "#entries_error"
-                    )
-            except (IOError, OSError) as e:
-                self.show_temporary_message(
-                    f"Error deleting entry: {e}", "#entries_error"
-                )
+            def on_confirm(confirmed: bool):
+                if confirmed:
+                    try:
+                        if os.path.exists(entry_path):
+                            os.remove(entry_path)
+                            self.show_temporary_message(
+                                f"Deleted entry: {entry_name}", "#entries_error"
+                            )
+                    except OSError as e:
+                        self.show_temporary_message(
+                            f"Error deleting entry: {e}", "#entries_error"
+                        )
 
-            self.rebuild_entries_list(self.current_journal)
+                    self.rebuild_entries_list(self.current_journal)
+
+            self.app.push_screen(
+                ConfirmDeleteModal("entry", entry_name), on_confirm
+            )
 
     def show_temporary_message(self, message: str, label_id: str):
         """
@@ -346,7 +358,7 @@ class NewJournal(ModalScreen[str]):
         try:
             journal = Journal(journal_name)
             self.dismiss(journal.name)
-        except (IOError, OSError) as e:
+        except OSError as e:
             self.query_one("#error_message", Label).update(f"Error creating journal: {e}")
 
     def get_existing_journals(self):
@@ -363,3 +375,62 @@ class NewJournal(ModalScreen[str]):
             for d in os.listdir(self.journals_path)
             if os.path.isdir(os.path.join(self.journals_path, d))
         ]
+
+
+class ConfirmDeleteModal(ModalScreen[bool]):
+    """Modal dialog for confirming deletion of journals or entries."""
+
+    def __init__(self, item_type: str, item_name: str):
+        """
+        Initialize the confirmation dialog.
+
+        Args:
+            item_type: Type of item being deleted ("journal" or "entry")
+            item_name: Name of the item to delete
+        """
+        super().__init__()
+        self.item_type = item_type
+        self.item_name = item_name
+
+    def compose(self) -> ComposeResult:
+        """
+        Compose the UI for this dialog.
+
+        Returns:
+            The composed UI elements
+        """
+        with Container(id="modal_container"):
+            with Vertical(id="modal_content"):
+                yield Label(f"Delete {self.item_type}?", classes="titleText")
+                yield Label(f"Are you sure you want to delete {self.item_type}:")
+                yield Label(f'"{self.item_name}"?', classes="accent")
+                if self.item_type == "journal":
+                    yield Label("This will delete all entries in this journal!")
+                yield Label("")
+                with Horizontal():
+                    yield Button("Yes", id="confirm_yes", variant="error")
+                    yield Button("No", id="confirm_no", variant="primary")
+                yield Label("")
+                yield Label("Press 'Esc' to cancel")
+
+    def on_key(self, event: Key):
+        """
+        Handle keyboard events.
+
+        Args:
+            event: The keyboard event
+        """
+        if event.key == "escape":
+            self.dismiss(False)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """
+        Handle button press events.
+
+        Args:
+            event: The button pressed event
+        """
+        if event.button.id == "confirm_yes":
+            self.dismiss(True)
+        elif event.button.id == "confirm_no":
+            self.dismiss(False)

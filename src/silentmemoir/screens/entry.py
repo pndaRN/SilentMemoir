@@ -94,7 +94,7 @@ class Entry(ModalScreen):
             try:
                 if self.journal_entry.exists():
                     content = self.journal_entry.read()
-            except IOError as e:
+            except OSError as e:
                 # If we can't read the file, show an error and use empty content
                 content = f"# Error\n\nCould not read entry: {e}"
 
@@ -210,7 +210,7 @@ class Entry(ModalScreen):
                 self.journal_entry.save(content)
                 if exit_after:
                     self.dismiss(f"Saved: {self.entry_name}")
-            except IOError as e:
+            except OSError as e:
                 # Show error to user - update status label
                 self.status_label.update(f"Error saving entry: {e}")
                 # Don't dismiss if there was an error
